@@ -16,22 +16,33 @@ class MainMenuController: NSWindowController {
     override func awakeFromNib() {
         super.windowDidLoad()
     }
-
+    
     @IBAction func findIso(_ sender: NSButton) {
-        showOpenFilePanel { (path) in
-            self.textFieldIso.stringValue = path;
+        let panel = createPanel();
+        panel.begin { (result) -> Void in
+            if result == NSApplication.ModalResponse.OK {
+                self.textFieldIso.stringValue = panel.urls.first?.path ?? "";
+            }
         }
     }
     
     @IBAction func findPpf(_ sender: NSButton) {
-        showOpenFilePanel { (path) in
-            self.textFieldPpf.stringValue = path;
+        let panel = createPanel();
+        panel.begin { (result) -> Void in
+            if result == NSApplication.ModalResponse.OK {
+                self.textFieldPpf.stringValue = panel.urls.first?.path ?? "";
+            }
         }
     }
-    
     @IBAction func apply(_ sender: NSButton) {
-        let result = ApplyPatch(UnsafeMutablePointer(mutating: self.textFieldIso.stringValue),
-                                UnsafeMutablePointer(mutating: self.textFieldPpf.stringValue));
+        let result = self.textFieldIso.stringValue.withCString { isoPath in
+            self.textFieldPpf.stringValue.withCString { ppfPath in
+                ApplyPatch(
+                    UnsafeMutablePointer(mutating: isoPath),
+                    UnsafeMutablePointer(mutating: ppfPath)
+                )
+            }
+        }
         
         let alert = NSAlert();
         alert.addButton(withTitle: "OK");
@@ -44,15 +55,6 @@ class MainMenuController: NSWindowController {
     func resetView() {
         self.textFieldIso.stringValue = "";
         self.textFieldPpf.stringValue = "";
-    }
-    
-    func showOpenFilePanel(completionHandler handler: @escaping (String) -> Swift.Void) {
-        let panel = createPanel();
-        panel.begin { (result) -> Void in
-            if result == NSFileHandlingPanelOKButton {
-                handler(panel.urls.first?.path ?? "");
-            }
-        }
     }
     
     func createPanel() -> NSOpenPanel {
